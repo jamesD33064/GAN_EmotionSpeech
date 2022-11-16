@@ -3,12 +3,18 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+import torchvision
 from torchvision import datasets
+from torch.utils.data import Dataset
 from torchvision.transforms import transforms
 import numpy as np
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
 import PIL.Image as Image
+import pandas as pd
+import os
+from skimage import io, transform
+
 def weights_init(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
@@ -75,6 +81,7 @@ class Generator(nn.Module):
             nn.Conv2d(64, 1, 3, 1, 1), # state size. 1 x 28 x 28
             nn.Tanh()
         )
+        self.activation = nn.Sigmoid()
         
     def forward(self, x):
         x = self.layer1(x)
@@ -130,8 +137,12 @@ g_scheduler = torch.optim.lr_scheduler.StepLR(g_optimizer, step_size=5, gamma=0.
 d_scheduler = torch.optim.lr_scheduler.StepLR(d_optimizer, step_size=5, gamma=0.5)
 
 # Load data
-train_set = datasets.MNIST('./dataset', train=True, download=True, transform=transforms.ToTensor())
+dataset_path = '/Users/ash/Documents/vscode/GitHub/GAN_EmotionSpeech/dataset/mel/angry'
+csv_path = '/Users/ash/Documents/vscode/GitHub/GAN_EmotionSpeech/dataset/dataset.csv'
+
+train_set = datasets.MNIST('./dataset', train=True, download=False, transform=transforms.ToTensor())
 train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=workers)
+
 def show_images(images, epoch):
     sqrtn = int(np.ceil(np.sqrt(images.shape[0])))
     plt.figure()
@@ -161,6 +172,7 @@ for epoch in range(epochs):
         # Sample noise as generator input
         noise = torch.randn(images.shape[0], latent_dim, 1, 1)
         noise = noise.to(device)
+        
         # 因為Generator希望生成出來的圖片跟真的一樣，所以fake_label標註用 1
         fake_label = torch.ones(images.shape[0], dtype=torch.long).to(device) # notice: label = 1
 
@@ -193,7 +205,8 @@ for epoch in range(epochs):
         d_optimizer.step()
         total_loss_d+=loss_d_value
         loss_d.append(loss_d_value)  
-        total_loss_g/=len(train_loader)
+        
+    total_loss_g/=len(train_loader)
     total_loss_d/=len(train_loader)         
     g_scheduler.step()
     d_scheduler.step()
