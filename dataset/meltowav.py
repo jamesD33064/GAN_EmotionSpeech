@@ -29,5 +29,4 @@ res = librosa.feature.inverse.mel_to_audio(spec,
                                            n_iter=32)
 
 # step4 - save it as a wav file
-import soundfile as sf
 sf.write("test1.wav", res, 22000)
